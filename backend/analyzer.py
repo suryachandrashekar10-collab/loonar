@@ -270,5 +270,26 @@ Only flag real engineering contradictions. Do not flag stylistic differences.
                                     "contradictions_found": len(contradictions)},
                           completed_at="now()")
 
+        # ── Notify n8n ───────────────────────────────────────────────────────
+        import os
+        n8n_base = os.getenv("N8N_WEBHOOK_BASE", "http://localhost:5678/webhook")
+        project_row = supabase.table("projects").select("name,customer").eq("id", project_id).execute()
+        project_name = project_row.data[0]["name"] if project_row.data else "Unknown Project"
+        customer = project_row.data[0].get("customer", "") if project_row.data else ""
+        high_risk = sum(1 for r in all_requirements if r.get("risk_level") == "high")
+        try:
+            async with httpx.AsyncClient(timeout=5) as client:
+                await client.post(f"{n8n_base}/analysis-complete", json={
+                    "project_id": project_id,
+                    "project_name": project_name,
+                    "customer": customer,
+                    "filename": filename,
+                    "requirements_found": len(all_requirements),
+                    "contradictions_found": len(contradictions),
+                    "high_risk_count": high_risk,
+                })
+        except Exception:
+            pass  # n8n notification is best-effort, never block the pipeline
+
     except Exception as e:
         await _update_job(supabase, job_id, status="failed", error=str(e))
