@@ -88,7 +88,11 @@ def create_project(data: ProjectCreate):
 def list_projects():
     if not supabase:
         return []
-    return supabase.table("projects").select("*").order("created_at", desc=True).execute().data
+    try:
+        # Use summary view (includes counts) when available
+        return supabase.from_("project_summary").select("*").order("created_at", desc=True).execute().data
+    except Exception:
+        return supabase.table("projects").select("*").order("created_at", desc=True).execute().data
 
 
 # ── RFQ Upload + Async Analysis ───────────────────────────────────────────────

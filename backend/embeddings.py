@@ -84,8 +84,9 @@ async def semantic_search(
 
     if query_embedding and supabase:
         try:
-            # pgvector RPC — requires match_documents function in Supabase
-            result = supabase.rpc("match_documents", {
+            # pgvector cosine similarity — requires migration 003
+            rpc_name = "match_documents" if table == "content_library" else "match_chunks"
+            result = supabase.rpc(rpc_name, {
                 "query_embedding": query_embedding,
                 "match_threshold": 0.5,
                 "match_count": limit,
