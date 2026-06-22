@@ -1,0 +1,144 @@
+# Loonar Ontology — Valves Vertical v0.1
+# Injected as system context into Claude extraction prompts.
+# Engineers correct this file; corrections fed back here.
+
+material_equivalences:
+  duplex_stainless:
+    - "UNS S31803"
+    - "UNS S32205"
+    - "1.4462"
+    - "duplex stainless steel"
+    - "DSS"
+    - "F51"
+    - "A182 F51"
+  super_duplex:
+    - "UNS S32750"
+    - "UNS S32760"
+    - "1.4410"
+    - "super duplex"
+    - "SDSS"
+    - "F53"
+    - "F55"
+  carbon_steel:
+    - "ASTM A105"
+    - "ASTM A216 WCB"
+    - "1.0619"
+    - "carbon steel"
+    - "CS"
+    - "WCB"
+  low_temp_carbon_steel:
+    - "ASTM A350 LF2"
+    - "ASTM A352 LCB"
+    - "LTCS"
+    - "low temperature carbon steel"
+    - "1.0566"
+  inconel_625:
+    - "UNS N06625"
+    - "Inconel 625"
+    - "alloy 625"
+    - "2.4856"
+    - "overlay 625"
+  monel_400:
+    - "UNS N04400"
+    - "Monel 400"
+    - "alloy 400"
+    - "2.4360"
+  titanium:
+    - "Grade 2 titanium"
+    - "UNS R50400"
+    - "Ti Gr.2"
+
+sour_service_standards:
+  primary: "NACE MR0175"
+  equivalent:
+    - "ISO 15156"
+    - "NACE MR0103"
+  triggers:
+    - "H2S"
+    - "hydrogen sulfide"
+    - "sour service"
+    - "wet sour"
+    - "SSC"          # sulphide stress cracking
+    - "HIC"          # hydrogen induced cracking
+    - "SOHIC"
+
+pressure_classes:  # ASME B16.34 / API 6D
+  ascending_order:
+    - "Class 150"
+    - "Class 300"
+    - "Class 600"
+    - "Class 900"
+    - "Class 1500"
+    - "Class 2500"
+  note: "Offering higher class than specified is typically acceptable (conservative). Lower class is always a deviation."
+
+key_standards:
+  valve_design:
+    - code: "API 6D"
+      scope: "Pipeline valves (ball, gate, check)"
+    - code: "API 600"
+      scope: "Steel gate valves"
+    - code: "API 602"
+      scope: "Compact steel gate valves"
+    - code: "API 608"
+      scope: "Metal ball valves"
+    - code: "ASME B16.34"
+      scope: "Valves — flanged, threaded, welding end"
+    - code: "EN 13709"
+      scope: "European steel globe and check valves"
+    - code: "EN 13851"
+      scope: "European butterfly valves"
+  testing:
+    - code: "API 598"
+      scope: "Valve inspection and testing"
+    - code: "API 6FA"
+      scope: "Fire testing of valves"
+    - code: "ISO 5208"
+      scope: "Industrial valves — pressure testing"
+    - code: "BS 6755"
+      scope: "Testing of valves (UK/EU)"
+  face_to_face:
+    - code: "ASME B16.10"
+      scope: "Face-to-face dimensions"
+    - code: "EN 558"
+      scope: "European face-to-face dimensions"
+  flanges:
+    - code: "ASME B16.5"
+      scope: "Pipe flanges and flanged fittings (Class 150-2500)"
+    - code: "ASME B16.47"
+      scope: "Large diameter flanges (Class 150-900, NPS 26-60)"
+    - code: "EN 1092-1"
+      scope: "European flanges"
+
+common_deviation_patterns:
+  - trigger: "low temperature rating below -46°C"
+    pattern: "Standard ASTM A350 LF2 is certified to -46°C. Extension to {temp}°C requires additional Charpy V-notch impact testing per ASTM A370."
+    risk: high
+
+  - trigger: "ASME Section I (Power Boilers) certification"
+    pattern: "Standard product line is certified under ASME Section VIII. Section I requires separate design qualification, welder requalification, and NDE procedures. Lead time impact: +6-10 weeks."
+    risk: critical
+
+  - trigger: "helium leak testing"
+    pattern: "Standard test is hydrostatic per API 598. Helium leak test requires specialized equipment and adds {cost_delta} and {time_delta} to the test program."
+    risk: medium
+
+  - trigger: "100% radiographic testing"
+    pattern: "Standard casting inspection is 10% RT per ASME B16.34. 100% RT increases cost by approximately 15-20% and extends lead time by 2-3 weeks."
+    risk: medium
+
+  - trigger: "fire-safe certification API 6FA or API 607"
+    pattern: "Fire-safe testing per API 6FA/607 requires third-party witnessed test. Vendor offers fire-safe design; certified test report available upon request."
+    risk: low
+
+  - trigger: "fugitive emissions low-E"
+    pattern: "Fugitive emissions compliance per ISO 15848 / TA-Luft requires specific stem seal qualification. Standard product uses graphite packing which qualifies for Class AH (ISO 15848) or VDI 2440 Class 2."
+    risk: medium
+
+  - trigger: "anti-static device"
+    pattern: "Anti-static device is standard feature. Complies with API 6D / ASME B16.34 requirements."
+    risk: low
+
+  - trigger: "oxygen service"
+    pattern: "Oxygen service requires dedicated cleaning per ASTM G93 / EIGA Doc 33, PTFE or special elastomer seats, and degreased assembly in a clean room environment. Not included in standard scope."
+    risk: critical
