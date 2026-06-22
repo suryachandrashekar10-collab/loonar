@@ -7,3 +7,7 @@ anthropic==0.28.0
 python-dotenv==1.0.1
 pydantic==2.7.1
 pyyaml==6.0.1
+pdfplumber==0.11.0
+pypdf==4.2.0
+openpyxl==3.1.4
+openai==1.30.1

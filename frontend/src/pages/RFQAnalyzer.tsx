@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import {
   Upload, FileText, AlertOctagon, CheckCircle, Loader2,
   ExternalLink, ShieldCheck, ShieldAlert, ShieldQuestion,
@@ -341,9 +341,8 @@ export default function RFQAnalyzer() {
                 </thead>
                 <tbody>
                   {requirements.map((req, i) => (
-                    <>
+                    <React.Fragment key={req.id}>
                       <tr
-                        key={req.id}
                         onClick={() => setExpandedReq(expandedReq === req.id ? null : req.id)}
                         className={clsx(
                           'cursor-pointer hover:bg-white/5 transition-colors',
@@ -378,7 +377,7 @@ export default function RFQAnalyzer() {
                       </tr>
 
                       {expandedReq === req.id && (
-                        <tr key={`${req.id}-exp`}>
+                        <tr>
                           <td colSpan={7} className="bg-brand-500/5 border-b border-border px-6 py-4">
                             <p className="text-sm text-slate-200 leading-relaxed mb-3">{req.text}</p>
                             <div className="flex items-center gap-2 text-xs text-slate-500 mb-4">
@@ -415,7 +414,7 @@ export default function RFQAnalyzer() {
                           </td>
                         </tr>
                       )}
-                    </>
+                    </React.Fragment>
                   ))}
                 </tbody>
               </table>

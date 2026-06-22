@@ -75,10 +75,12 @@ async def _update_job(supabase, job_id: str, **fields):
 async def run_analysis(
     supabase,
     api_key: str,
+    openai_key: str,
     job_id: str,
     project_id: str,
     document_id: str,
-    extracted_text: str,
+    pages: list[dict],
+    chunks: list[dict],
     filename: str,
 ):
     """
@@ -86,28 +88,12 @@ async def run_analysis(
     Progress written to analysis_jobs so Supabase Realtime streams it to frontend.
     """
     try:
-        # ── Step 1: Chunk the text ────────────────────────────────────────────
+        # ── Step 1: Store chunks (already extracted by pdf_parser) ───────────
         await _update_job(supabase, job_id, status="ingesting",
-                          progress={"stage": "Splitting document into chunks...",
-                                    "pages_processed": 0, "requirements_found": 0,
-                                    "contradictions_found": 0})
+                          progress={"stage": f"Indexing {len(pages)} pages into {len(chunks)} chunks...",
+                                    "pages_processed": 0, "pages_total": len(pages),
+                                    "requirements_found": 0, "contradictions_found": 0})
 
-        paragraphs = [p.strip() for p in extracted_text.split("\n\n") if len(p.strip()) > 40]
-        chunks, current, page_est = [], "", 1
-        for p in paragraphs:
-            if len(current) + len(p) > 3000:
-                if current:
-                    chunks.append({"text": current.strip(), "page_start": page_est,
-                                   "page_end": page_est + max(1, len(current) // 3000)})
-                    page_est += max(1, len(current) // 3000)
-                current = p
-            else:
-                current += "\n\n" + p
-        if current:
-            chunks.append({"text": current.strip(), "page_start": page_est,
-                           "page_end": page_est + 1})
-
-        # Store chunks
         for i, chunk in enumerate(chunks):
             chunk_row = {
                 "id": str(uuid.uuid4()),
@@ -121,7 +107,12 @@ async def run_analysis(
             result = supabase.table("document_chunks").insert(chunk_row).execute()
             chunk["db_id"] = result.data[0]["id"]
 
-        total_pages = chunks[-1]["page_end"] if chunks else 1
+        total_pages = pages[-1]["page_number"] if pages else len(chunks)
+
+        # Kick off embedding in background (non-blocking for extraction pipeline)
+        from embeddings import embed_and_store_chunks
+        if openai_key:
+            asyncio.create_task(embed_and_store_chunks(supabase, openai_key, chunks, document_id))
 
         # ── Step 2: Extract requirements per chunk ────────────────────────────
         await _update_job(supabase, job_id, status="extracting",

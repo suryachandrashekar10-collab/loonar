@@ -1,12 +1,13 @@
-import { Outlet, NavLink, useLocation } from 'react-router-dom'
+import { Outlet, NavLink } from 'react-router-dom'
 import {
-  LayoutDashboard, FileSearch, AlertTriangle,
+  LayoutDashboard, FolderOpen, FileSearch, AlertTriangle,
   BookOpen, GitCompare, Scale, ChevronRight
 } from 'lucide-react'
 import clsx from 'clsx'
 
 const nav = [
   { to: '/dashboard',  label: 'Dashboard',         icon: LayoutDashboard },
+  { to: '/projects',   label: 'Projects',           icon: FolderOpen },
   { to: '/rfq',        label: 'RFQ Analyzer',       icon: FileSearch },
   { to: '/deviations', label: 'Deviation Register',  icon: AlertTriangle },
   { to: '/library',    label: 'Content Library',     icon: BookOpen },
@@ -15,8 +16,6 @@ const nav = [
 ]
 
 export default function Layout() {
-  const location = useLocation()
-
   return (
     <div className="flex h-screen bg-surface overflow-hidden">
       {/* Sidebar */}
