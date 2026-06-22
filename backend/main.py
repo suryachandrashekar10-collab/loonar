@@ -189,7 +189,7 @@ def get_requirements(project_id: str, risk_level: Optional[str] = None):
     if not supabase:
         return []
     q = supabase.table("requirements").select(
-        "*, chunk:source_chunk_id(page_start, page_end, text)"
+        "id,project_id,document_id,req_id,clause,category,text,risk_level,confidence,page_number,verified,verified_by,verified_at,source_chunk_id,created_at"
     ).eq("project_id", project_id)
     if risk_level:
         q = q.eq("risk_level", risk_level)

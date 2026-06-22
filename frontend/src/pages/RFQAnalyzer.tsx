@@ -122,12 +122,13 @@ export default function RFQAnalyzer() {
         fetch(`http://localhost:8000/projects/${pid}/contradictions`),
       ])
       if (reqRes.ok) setRequirements(await reqRes.json())
-      else setRequirements(MOCK_REQUIREMENTS)
+      else setRequirements([])
       if (conRes.ok) setContradictions(await conRes.json())
-      else setContradictions(MOCK_CONTRADICTIONS)
-    } catch {
-      setRequirements(MOCK_REQUIREMENTS)
-      setContradictions(MOCK_CONTRADICTIONS)
+      else setContradictions([])
+    } catch (err) {
+      console.error('loadResults failed:', err)
+      setRequirements([])
+      setContradictions([])
     }
   }
 
@@ -175,8 +176,7 @@ export default function RFQAnalyzer() {
       setJobStatus(s)
       setProgress(prev => ({ ...prev, ...p }))
       if (s === 'done') {
-        setRequirements(MOCK_REQUIREMENTS)
-        setContradictions(MOCK_CONTRADICTIONS)
+        setTimeout(() => loadResults(projectId), 1500)
       } else {
         setTimeout(tick, 900)
       }
@@ -194,7 +194,7 @@ export default function RFQAnalyzer() {
     try {
       const form = new FormData()
       form.append('file', file)
-      form.append('project_id', DEMO_PROJECT_ID)
+      form.append('project_id', projectId)
       const res = await fetch('http://localhost:8000/rfq/upload', { method: 'POST', body: form })
       if (res.ok) {
         const data = await res.json()
