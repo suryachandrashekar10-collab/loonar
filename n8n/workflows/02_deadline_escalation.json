@@ -1,0 +1,95 @@
+{
+  "name": "Loonar — Bid Deadline Escalation",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "cronExpression", "expression": "0 8 * * *" }]
+        }
+      },
+      "id": "cron-trigger",
+      "name": "Every Day at 8am",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/projects",
+        "options": {}
+      },
+      "id": "fetch-projects",
+      "name": "Fetch Active Projects",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const projects = $input.all().map(i => i.json);\nconst today = new Date();\nconst alerts = [];\n\nfor (const p of projects) {\n  if (!p.deadline || p.status !== 'active') continue;\n  \n  const deadline = new Date(p.deadline);\n  const daysLeft = Math.ceil((deadline - today) / (1000 * 60 * 60 * 24));\n  \n  if ([14, 7, 1].includes(daysLeft)) {\n    const urgency = daysLeft === 1 ? '🚨 URGENT' : daysLeft === 7 ? '⚠️ WARNING' : '📅 REMINDER';\n    alerts.push({\n      project: p.name,\n      customer: p.customer,\n      daysLeft,\n      deadline: p.deadline,\n      value: p.value_eur ? `€${(p.value_eur/1e6).toFixed(1)}M` : 'TBD',\n      projectId: p.id,\n      urgency,\n      message: `${urgency} — ${p.name}\\n*Customer:* ${p.customer}\\n*Deadline:* ${p.deadline} (${daysLeft} day${daysLeft === 1 ? '' : 's'} left)\\n*Value:* ${p.value_eur ? '€' + (p.value_eur/1e6).toFixed(1) + 'M' : 'TBD'}\\n<http://localhost:5173/rfq?project=${p.id}|Open project →>`\n    });\n  }\n}\n\nif (alerts.length === 0) {\n  return [{ json: { skip: true, message: 'No deadlines today' } }];\n}\n\nreturn alerts.map(a => ({ json: a }));"
+      },
+      "id": "check-deadlines",
+      "name": "Check Deadlines",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [720, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.skip }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "notEquals" }
+            }
+          ]
+        }
+      },
+      "id": "has-alerts",
+      "name": "Has Alerts?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [960, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Log that no deadlines need alerting today\nconsole.log('No deadline alerts today:', new Date().toISOString());\nreturn [{ json: { status: 'no_alerts', timestamp: new Date().toISOString() } }];"
+      },
+      "id": "no-alerts",
+      "name": "No Alerts Today",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [960, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "// In production: send to Slack/email here\n// For now: log the alert\nconst alert = $input.first().json;\nconsole.log('DEADLINE ALERT:', alert.message);\nreturn [{ json: { status: 'alert_sent', project: alert.project, daysLeft: alert.daysLeft } }];"
+      },
+      "id": "send-alert",
+      "name": "Send Alert (Log)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1200, 300]
+    }
+  ],
+  "connections": {
+    "Every Day at 8am": {
+      "main": [[{ "node": "Fetch Active Projects", "type": "main", "index": 0 }]]
+    },
+    "Fetch Active Projects": {
+      "main": [[{ "node": "Check Deadlines", "type": "main", "index": 0 }]]
+    },
+    "Check Deadlines": {
+      "main": [[{ "node": "Has Alerts?", "type": "main", "index": 0 }]]
+    },
+    "Has Alerts?": {
+      "main": [
+        [{ "node": "Send Alert (Log)", "type": "main", "index": 0 }],
+        [{ "node": "No Alerts Today", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": { "executionOrder": "v1" }
+}

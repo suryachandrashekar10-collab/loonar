@@ -110,7 +110,10 @@ async def upload_rfq(
     storage_path = f"rfq/{project_id}/{file.filename}"
 
     if supabase:
-        supabase.storage.from_("documents").upload(storage_path, contents)
+        try:
+            supabase.storage.from_("documents").upload(storage_path, contents)
+        except Exception:
+            supabase.storage.from_("documents").update(storage_path, contents)
         doc = supabase.table("documents").insert({
             "id": doc_id,
             "project_id": project_id,

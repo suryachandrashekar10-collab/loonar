@@ -1,0 +1,60 @@
+{
+  "name": "Loonar — Weekly Pipeline Report",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "cronExpression", "expression": "0 8 * * 1" }]
+        }
+      },
+      "id": "cron-monday",
+      "name": "Every Monday at 8am",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/projects",
+        "options": {}
+      },
+      "id": "fetch-projects",
+      "name": "Fetch All Projects",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const projects = $input.all().map(i => i.json);\nconst today = new Date();\n\nconst active = projects.filter(p => p.status === 'active');\nconst totalValue = active.reduce((sum, p) => sum + (p.value_eur || 0), 0);\n\nconst rows = active.map(p => {\n  const deadline = p.deadline ? new Date(p.deadline) : null;\n  const daysLeft = deadline ? Math.ceil((deadline - today) / (1000 * 60 * 60 * 24)) : null;\n  const urgency = daysLeft === null ? '—' : daysLeft <= 7 ? '🔴' : daysLeft <= 14 ? '🟡' : '🟢';\n  return `${urgency} *${p.name}* — ${p.customer || 'Unknown'}\\n   Deadline: ${p.deadline || 'TBD'} ${daysLeft !== null ? '(' + daysLeft + 'd)' : ''} | Value: ${p.value_eur ? '€' + (p.value_eur/1e6).toFixed(1) + 'M' : 'TBD'}`;\n}).join('\\n\\n');\n\nconst week = Math.ceil((today - new Date(today.getFullYear(), 0, 1)) / (7 * 24 * 60 * 60 * 1000));\n\nconst slackMessage = `📊 *Loonar Weekly Pipeline Report — W${week}*\\n\\n*${active.length} active bid${active.length !== 1 ? 's' : ''}* | Total pipeline: *€${(totalValue/1e6).toFixed(1)}M*\\n\\n${rows || '_No active projects_'}\\n\\n_Generated ${today.toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}_`;\n\nconst emailHtml = `\n<h2 style=\"color:#1a3a5c\">Loonar Weekly Pipeline Report — W${week}</h2>\n<p><strong>${active.length} active bids</strong> | Total pipeline: <strong>€${(totalValue/1e6).toFixed(1)}M</strong></p>\n<table style=\"width:100%;border-collapse:collapse;font-family:sans-serif;font-size:14px\">\n  <thead>\n    <tr style=\"background:#1a3a5c;color:white\">\n      <th style=\"padding:8px;text-align:left\">Project</th>\n      <th style=\"padding:8px;text-align:left\">Customer</th>\n      <th style=\"padding:8px;text-align:left\">Deadline</th>\n      <th style=\"padding:8px;text-align:left\">Days Left</th>\n      <th style=\"padding:8px;text-align:right\">Value</th>\n    </tr>\n  </thead>\n  <tbody>\n    ${active.map((p, i) => {\n      const deadline = p.deadline ? new Date(p.deadline) : null;\n      const daysLeft = deadline ? Math.ceil((deadline - today) / (1000 * 60 * 60 * 24)) : null;\n      const bg = i % 2 === 0 ? '#f8fafc' : '#ffffff';\n      const urgencyColor = daysLeft === null ? '' : daysLeft <= 7 ? 'color:#dc2626' : daysLeft <= 14 ? 'color:#d97706' : 'color:#16a34a';\n      return `<tr style=\"background:${bg}\"><td style=\"padding:8px\">${p.name}</td><td style=\"padding:8px\">${p.customer || '—'}</td><td style=\"padding:8px\">${p.deadline || 'TBD'}</td><td style=\"padding:8px;${urgencyColor}\">${daysLeft !== null ? daysLeft + 'd' : '—'}</td><td style=\"padding:8px;text-align:right\">${p.value_eur ? '€' + (p.value_eur/1e6).toFixed(1) + 'M' : 'TBD'}</td></tr>`;\n    }).join('')}\n  </tbody>\n</table>\n<p style=\"color:#6b7280;font-size:12px\">Generated ${today.toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>\n`;\n\nreturn [{ json: { slackMessage, emailHtml, activeCount: active.length, totalValue, week } }];"
+      },
+      "id": "build-report",
+      "name": "Build Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [720, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// In production: send to Slack channel / email distribution list\n// For now: log the report\nconst report = $input.first().json;\nconsole.log('=== WEEKLY PIPELINE REPORT ===');\nconsole.log(report.slackMessage);\nconsole.log('==============================');\nreturn [{ json: { status: 'report_sent', week: report.week, activeProjects: report.activeCount, pipelineEur: report.totalValue } }];"
+      },
+      "id": "send-report",
+      "name": "Send Report (Log)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [960, 300]
+    }
+  ],
+  "connections": {
+    "Every Monday at 8am": {
+      "main": [[{ "node": "Fetch All Projects", "type": "main", "index": 0 }]]
+    },
+    "Fetch All Projects": {
+      "main": [[{ "node": "Build Report", "type": "main", "index": 0 }]]
+    },
+    "Build Report": {
+      "main": [[{ "node": "Send Report (Log)", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" }
+}

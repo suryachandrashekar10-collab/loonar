@@ -1,0 +1,49 @@
+{
+  "name": "Loonar — Analysis Complete Notification",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "analysis-complete",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook — Analysis Complete",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || $input.first().json;\n\nconst project = body.project_name || 'Unknown Project';\nconst customer = body.customer || '';\nconst reqs = body.requirements_found || 0;\nconst contradictions = body.contradictions_found || 0;\nconst highRisk = body.high_risk_count || 0;\nconst projectId = body.project_id || '';\nconst filename = body.filename || 'document';\n\nconst riskEmoji = highRisk > 5 ? '🔴' : highRisk > 2 ? '🟡' : '🟢';\nconst contradictionWarning = contradictions > 0 ? `⚠️ ${contradictions} contradiction(s) detected — review before bidding` : '✅ No contradictions detected';\n\nconst message = `${riskEmoji} *RFQ Analysis Complete*\n\n*Project:* ${project}${customer ? ' — ' + customer : ''}\n*Document:* ${filename}\n\n*Results:*\n• ${reqs} requirements extracted\n• ${highRisk} high-risk items\n• ${contradictionWarning}\n\n<http://localhost:5173/rfq?project=${projectId}|View full analysis →>`;\n\nconst emailHtml = `\n<h2 style=\"color:#1a3a5c\">RFQ Analysis Complete</h2>\n<p><strong>Project:</strong> ${project}${customer ? ' — ' + customer : ''}</p>\n<p><strong>Document:</strong> ${filename}</p>\n<hr/>\n<h3>Results</h3>\n<ul>\n<li>${reqs} requirements extracted</li>\n<li>${highRisk} high-risk items ${riskEmoji}</li>\n<li>${contradictionWarning}</li>\n</ul>\n<p><a href=\"http://localhost:5173/rfq?project=${projectId}\" style=\"background:#3b82f6;color:white;padding:10px 20px;text-decoration:none;border-radius:6px\">View Full Analysis</a></p>\n`;\n\nreturn [{ json: { message, emailHtml, project, reqs, contradictions, highRisk, projectId } }];"
+      },
+      "id": "format-message",
+      "name": "Format Notification",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"status\": \"notified\", \"project\": \"{{ $('Format Notification').item.json.project }}\" }",
+        "options": {}
+      },
+      "id": "respond",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [720, 300]
+    }
+  ],
+  "connections": {
+    "Webhook — Analysis Complete": {
+      "main": [[{ "node": "Format Notification", "type": "main", "index": 0 }]]
+    },
+    "Format Notification": {
+      "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" }
+}
