@@ -1,0 +1,70 @@
+{
+  "name": "Loonar — Addendum Diff & Impact Mapping",
+  "nodes": [
+    {
+      "name": "Webhook: Addendum Upload",
+      "type": "n8n-nodes-base.webhook",
+      "parameters": { "path": "addendum-diff", "httpMethod": "POST" },
+      "position": [200, 300]
+    },
+    {
+      "name": "Fetch Original Doc Text",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/documents?id=eq.{{ $json.original_doc_id }}&select=*"
+      },
+      "position": [450, 200]
+    },
+    {
+      "name": "Fetch Addendum Text",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/documents?id=eq.{{ $json.addendum_doc_id }}&select=*"
+      },
+      "position": [450, 400]
+    },
+    {
+      "name": "Claude: Diff + Impact Map",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "headers": {
+          "x-api-key": "={{ $env.ANTHROPIC_API_KEY }}",
+          "anthropic-version": "2023-06-01"
+        },
+        "body": {
+          "model": "claude-sonnet-4-6",
+          "max_tokens": 8096,
+          "messages": [{
+            "role": "user",
+            "content": "You are an industrial proposal expert. Compare these two specification documents and identify every changed clause.\n\nFor each change output JSON:\n{\n  change_id, section_ref, change_type (material|testing|commercial|dimensional),\n  severity (critical|high|medium|low),\n  text_before, text_after,\n  affected_proposal_sections: [...],\n  action_required\n}\n\nOriginal document:\n{{ $('Fetch Original Doc Text').item.json.extracted_text }}\n\nAddendum:\n{{ $('Fetch Addendum Text').item.json.extracted_text }}"
+          }]
+        }
+      },
+      "position": [700, 300]
+    },
+    {
+      "name": "Store Addendum Changes",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/addendum_changes",
+        "headers": {
+          "apikey": "={{ $env.SUPABASE_SERVICE_KEY }}",
+          "Authorization": "Bearer {{ $env.SUPABASE_SERVICE_KEY }}"
+        }
+      },
+      "position": [950, 300]
+    }
+  ],
+  "connections": {
+    "Webhook: Addendum Upload": {
+      "main": [[{ "node": "Fetch Original Doc Text" }, { "node": "Fetch Addendum Text" }]]
+    },
+    "Fetch Addendum Text": { "main": [[{ "node": "Claude: Diff + Impact Map" }]] },
+    "Claude: Diff + Impact Map": { "main": [[{ "node": "Store Addendum Changes" }]] }
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "name": "Loonar — Contradiction Detection",
+  "nodes": [
+    {
+      "name": "Webhook: Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "parameters": { "path": "contradiction-detect", "httpMethod": "POST" },
+      "position": [200, 300]
+    },
+    {
+      "name": "Fetch All Requirements",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/requirements?project_id=eq.{{ $json.project_id }}&select=*",
+        "headers": {
+          "apikey": "={{ $env.SUPABASE_SERVICE_KEY }}",
+          "Authorization": "Bearer {{ $env.SUPABASE_SERVICE_KEY }}"
+        }
+      },
+      "position": [450, 300]
+    },
+    {
+      "name": "Claude: Detect Contradictions",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "headers": {
+          "x-api-key": "={{ $env.ANTHROPIC_API_KEY }}",
+          "anthropic-version": "2023-06-01"
+        },
+        "body": {
+          "model": "claude-sonnet-4-6",
+          "max_tokens": 4096,
+          "messages": [{
+            "role": "user",
+            "content": "You are an industrial specification expert. Review these requirements extracted from multiple RFQ documents and identify any direct contradictions between them — e.g., one document specifies carbon steel, another specifies duplex stainless for the same application.\n\nRequirements:\n{{ JSON.stringify($json) }}\n\nOutput JSON array: [{req_id_a, req_id_b, description, severity}]\nSeverity: critical (safety/material incompatibility), high (functional conflict), medium (procedural conflict), low (minor inconsistency)."
+          }]
+        }
+      },
+      "position": [700, 300]
+    },
+    {
+      "name": "Store Contradictions",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/contradictions",
+        "headers": {
+          "apikey": "={{ $env.SUPABASE_SERVICE_KEY }}",
+          "Authorization": "Bearer {{ $env.SUPABASE_SERVICE_KEY }}"
+        }
+      },
+      "position": [950, 300]
+    }
+  ],
+  "connections": {
+    "Webhook: Trigger": { "main": [[{ "node": "Fetch All Requirements" }]] },
+    "Fetch All Requirements": { "main": [[{ "node": "Claude: Detect Contradictions" }]] },
+    "Claude: Detect Contradictions": { "main": [[{ "node": "Store Contradictions" }]] }
+  }
+}

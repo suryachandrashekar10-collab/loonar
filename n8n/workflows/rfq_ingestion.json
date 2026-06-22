@@ -1,0 +1,92 @@
+{
+  "name": "Loonar — RFQ Ingestion Pipeline",
+  "nodes": [
+    {
+      "name": "Webhook: RFQ Upload",
+      "type": "n8n-nodes-base.webhook",
+      "parameters": { "path": "rfq-ingest", "httpMethod": "POST" },
+      "position": [200, 300]
+    },
+    {
+      "name": "Download from Supabase Storage",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.SUPABASE_URL }}/storage/v1/object/documents/{{ $json.storage_path }}",
+        "authentication": "genericCredentialType",
+        "responseFormat": "file"
+      },
+      "position": [450, 300]
+    },
+    {
+      "name": "Extract Text (Reducto / OCR)",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.reducto.ai/v1/parse",
+        "body": "={{ $binary }}"
+      },
+      "position": [700, 300]
+    },
+    {
+      "name": "Chunk Text",
+      "type": "n8n-nodes-base.code",
+      "parameters": {
+        "jsCode": "// Split extracted text into ~500-token chunks preserving paragraph boundaries\nconst text = $json.text;\nconst chunks = [];\nconst paragraphs = text.split(/\\n\\n+/);\nlet current = '';\nfor (const p of paragraphs) {\n  if ((current + p).length > 2000) {\n    if (current) chunks.push({ text: current.trim(), index: chunks.length });\n    current = p;\n  } else {\n    current += '\\n\\n' + p;\n  }\n}\nif (current) chunks.push({ text: current.trim(), index: chunks.length });\nreturn chunks.map(c => ({ json: { ...c, document_id: $('Webhook: RFQ Upload').item.json.document_id } }));"
+      },
+      "position": [950, 300]
+    },
+    {
+      "name": "Generate Embeddings (Claude)",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "headers": {
+          "x-api-key": "={{ $env.ANTHROPIC_API_KEY }}",
+          "anthropic-version": "2023-06-01"
+        },
+        "body": {
+          "model": "claude-haiku-4-5-20251001",
+          "max_tokens": 1024,
+          "messages": [{
+            "role": "user",
+            "content": "Extract all technical requirements from this industrial RFQ text. For each requirement output JSON: {req_id, clause, category, text, risk_level, page_number}. Categories: Material, Testing, Standards, Dimensional, Inspection, Commercial.\n\nText:\n{{ $json.text }}"
+          }]
+        }
+      },
+      "position": [1200, 300]
+    },
+    {
+      "name": "Store Requirements in Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/requirements",
+        "headers": {
+          "apikey": "={{ $env.SUPABASE_SERVICE_KEY }}",
+          "Authorization": "Bearer {{ $env.SUPABASE_SERVICE_KEY }}"
+        }
+      },
+      "position": [1450, 300]
+    },
+    {
+      "name": "Trigger Contradiction Detection",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5678/webhook/contradiction-detect",
+        "body": "={{ { project_id: $('Webhook: RFQ Upload').item.json.project_id } }}"
+      },
+      "position": [1700, 300]
+    }
+  ],
+  "connections": {
+    "Webhook: RFQ Upload": { "main": [[{ "node": "Download from Supabase Storage" }]] },
+    "Download from Supabase Storage": { "main": [[{ "node": "Extract Text (Reducto / OCR)" }]] },
+    "Extract Text (Reducto / OCR)": { "main": [[{ "node": "Chunk Text" }]] },
+    "Chunk Text": { "main": [[{ "node": "Generate Embeddings (Claude)" }]] },
+    "Generate Embeddings (Claude)": { "main": [[{ "node": "Store Requirements in Supabase" }]] },
+    "Store Requirements in Supabase": { "main": [[{ "node": "Trigger Contradiction Detection" }]] }
+  }
+}
