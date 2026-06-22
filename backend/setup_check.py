@@ -14,7 +14,7 @@ load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "..", ".env"))
 
 SUPABASE_URL = os.getenv("SUPABASE_URL", "")
 SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_KEY", "")
-ANTHROPIC_KEY = os.getenv("ANTHROPIC_API_KEY", "")
+GEMINI_KEY = os.getenv("GROQ_API_KEY", "")
 OPENAI_KEY = os.getenv("OPENAI_API_KEY", "")
 
 PASS = "✅"
@@ -40,7 +40,7 @@ def main():
     section("1. Environment variables")
     all_ok &= check("SUPABASE_URL",       bool(SUPABASE_URL),   SUPABASE_URL[:40] + "..." if SUPABASE_URL else "not set")
     all_ok &= check("SUPABASE_SERVICE_KEY", bool(SUPABASE_KEY), "set" if SUPABASE_KEY else "not set")
-    all_ok &= check("ANTHROPIC_API_KEY",  bool(ANTHROPIC_KEY),  "set" if ANTHROPIC_KEY else "not set")
+    all_ok &= check("GROQ_API_KEY",       bool(GEMINI_KEY),     "set" if GEMINI_KEY else "not set — get free key at console.groq.com")
     check(          "OPENAI_API_KEY",     bool(OPENAI_KEY),      "set (optional — needed for semantic search)" if not OPENAI_KEY else "set")
 
     if not (SUPABASE_URL and SUPABASE_KEY):
@@ -75,10 +75,10 @@ def main():
 
     section("4. pgvector extension + RPC functions")
     try:
-        sb.rpc("match_documents", {"query_embedding": [0.0] * 1536, "match_threshold": 0.99, "match_count": 1}).execute()
+        sb.rpc("match_documents", {"query_embedding": [0.0] * 768, "match_threshold": 0.99, "match_count": 1}).execute()
         check("match_documents RPC", True)
     except Exception as e:
-        all_ok &= check("match_documents RPC", False, "run migration 003 to create this function")
+        all_ok &= check("match_documents RPC", False, str(e)[:120])
 
     try:
         sb.rpc("match_requirements", {"query_embedding": [0.0] * 1536, "match_threshold": 0.99}).execute()
@@ -97,7 +97,7 @@ def main():
         # Supabase Python client can't run raw SQL — that's expected
         # Just check if demo project exists
         try:
-            proj = sb.table("projects").select("id").eq("id", "demo-project-0001-0000-0000-000000000000").execute()
+            proj = sb.table("projects").select("id").eq("id", "00000001-0000-0000-0000-000000000001").execute()
             if proj.data:
                 check("Demo project exists (already seeded)", True)
             else:
@@ -105,19 +105,18 @@ def main():
         except Exception as e:
             check("Demo data check", False, str(e)[:60])
 
-    section("6. Anthropic API")
+    section("6. Groq API")
     try:
-        import httpx, json
+        import httpx
         resp = httpx.post(
-            "https://api.anthropic.com/v1/messages",
-            headers={"x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"},
-            json={"model": "claude-haiku-4-5-20251001", "max_tokens": 10,
-                  "messages": [{"role": "user", "content": "ping"}]},
+            "https://api.groq.com/openai/v1/chat/completions",
+            headers={"Authorization": f"Bearer {GEMINI_KEY}", "content-type": "application/json"},
+            json={"model": "llama-3.3-70b-versatile", "messages": [{"role": "user", "content": "ping"}], "max_tokens": 5},
             timeout=15,
         )
-        all_ok &= check("Claude API (Haiku)", resp.status_code == 200, f"HTTP {resp.status_code}")
+        all_ok &= check("Groq API (Llama 3.3 70B)", resp.status_code == 200, f"HTTP {resp.status_code}")
     except Exception as e:
-        all_ok &= check("Claude API", False, str(e)[:60])
+        all_ok &= check("Groq API", False, str(e)[:60])
 
     section("7. OpenAI embeddings (optional)")
     if OPENAI_KEY:

@@ -7,24 +7,24 @@ import os
 from typing import Optional
 import httpx
 
-OPENAI_EMBED_URL = "https://api.openai.com/v1/embeddings"
-EMBED_MODEL = "text-embedding-3-small"
-EMBED_DIM = 1536
+GOOGLE_EMBED_URL = "https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent"
+EMBED_DIM = 768  # text-embedding-004 outputs 768 dims
 
 
 async def embed_text(text: str, openai_key: str) -> Optional[list[float]]:
-    """Generate a 1536-dim embedding vector for text."""
+    """Generate embedding via Google text-embedding-004 (free, same key as Gemini).
+    openai_key param is reused as the Gemini/Google API key."""
     if not openai_key or not text.strip():
         return None
     try:
         async with httpx.AsyncClient(timeout=30) as client:
             r = await client.post(
-                OPENAI_EMBED_URL,
-                headers={"Authorization": f"Bearer {openai_key}"},
-                json={"model": EMBED_MODEL, "input": text[:8191]},
+                GOOGLE_EMBED_URL,
+                headers={"content-type": "application/json", "X-goog-api-key": openai_key},
+                json={"model": "models/text-embedding-004", "content": {"parts": [{"text": text[:8191]}]}},
             )
             r.raise_for_status()
-            return r.json()["data"][0]["embedding"]
+            return r.json()["embedding"]["values"]
     except Exception:
         return None
 
@@ -45,26 +45,16 @@ async def embed_and_store_chunks(
 
     for i in range(0, len(chunks), batch_size):
         batch = chunks[i:i + batch_size]
-        texts = [c["text"][:8191] for c in batch]
-
         try:
-            async with httpx.AsyncClient(timeout=60) as client:
-                r = await client.post(
-                    OPENAI_EMBED_URL,
-                    headers={"Authorization": f"Bearer {openai_key}"},
-                    json={"model": EMBED_MODEL, "input": texts},
-                )
-                r.raise_for_status()
-                embeddings = [item["embedding"] for item in r.json()["data"]]
-
-            for chunk, embedding in zip(batch, embeddings):
-                if chunk.get("db_id"):
+            # Google embedding API is per-request (no batch endpoint), so embed sequentially
+            for chunk in batch:
+                embedding = await embed_text(chunk["text"], openai_key)
+                if embedding and chunk.get("db_id"):
                     supabase.table("document_chunks").update(
                         {"embedding": embedding}
                     ).eq("id", chunk["db_id"]).execute()
-
         except Exception:
-            pass  # embeddings are enhancement, not critical path
+            pass
 
 
 async def semantic_search(

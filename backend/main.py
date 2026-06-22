@@ -29,8 +29,8 @@ app.add_middleware(
 
 SUPABASE_URL = os.getenv("SUPABASE_URL", "")
 SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_KEY", "")
-ANTHROPIC_KEY = os.getenv("ANTHROPIC_API_KEY", "")
-OPENAI_KEY = os.getenv("OPENAI_API_KEY", "")
+GEMINI_KEY = os.getenv("GROQ_API_KEY", "")
+OPENAI_KEY = os.getenv("GOOGLE_API_KEY", "") or os.getenv("OPENAI_API_KEY", "")
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL else None
 
@@ -131,10 +131,10 @@ async def upload_rfq(
     pages = extract_text_with_pages(contents, file.filename)
     chunks = pages_to_chunks(pages)
 
-    if supabase and ANTHROPIC_KEY:
+    if supabase and GEMINI_KEY:
         background_tasks.add_task(
             run_analysis,
-            supabase, ANTHROPIC_KEY, OPENAI_KEY, job_id,
+            supabase, GEMINI_KEY, OPENAI_KEY, job_id,
             project_id, doc_id, pages, chunks, file.filename
         )
 

@@ -11,7 +11,8 @@ import httpx
 import yaml
 from pathlib import Path
 
-ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
+GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
+GROQ_MODEL = "llama-3.3-70b-versatile"  # best free model on Groq
 ONTOLOGY_PATH = Path(__file__).parent.parent / "ontology" / "valves.yaml"
 
 
@@ -42,23 +43,20 @@ def load_ontology() -> str:
 ONTOLOGY_CONTEXT = load_ontology()
 
 
-async def _claude(api_key: str, model: str, prompt: str, max_tokens: int = 4096) -> str:
+async def _groq(api_key: str, prompt: str, max_tokens: int = 4096) -> str:
     async with httpx.AsyncClient(timeout=120) as client:
         r = await client.post(
-            ANTHROPIC_URL,
-            headers={
-                "x-api-key": api_key,
-                "anthropic-version": "2023-06-01",
-                "content-type": "application/json",
-            },
+            GROQ_URL,
+            headers={"Authorization": f"Bearer {api_key}", "content-type": "application/json"},
             json={
-                "model": model,
-                "max_tokens": max_tokens,
+                "model": GROQ_MODEL,
                 "messages": [{"role": "user", "content": prompt}],
+                "max_tokens": max_tokens,
+                "temperature": 0.1,
             },
         )
         r.raise_for_status()
-        return r.json()["content"][0]["text"]
+        return r.json()["choices"][0]["message"]["content"]
 
 
 def _parse_json_block(text: str) -> Any:
@@ -74,7 +72,7 @@ async def _update_job(supabase, job_id: str, **fields):
 
 async def run_analysis(
     supabase,
-    api_key: str,
+    api_key: str,   # Gemini API key
     openai_key: str,
     job_id: str,
     project_id: str,
@@ -150,7 +148,7 @@ Return ONLY a JSON array. No explanation, no markdown prose outside the code blo
 {chunk['text']}
 """
             try:
-                response = await _claude(api_key, "claude-haiku-4-5-20251001", prompt, 2048)
+                response = await _groq(api_key, prompt, 2048)
                 reqs = _parse_json_block(response)
                 if isinstance(reqs, list):
                     for req in reqs:
@@ -223,7 +221,7 @@ Return a JSON array of contradictions (empty array if none):
 Only flag real engineering contradictions. Do not flag stylistic differences.
 """
             try:
-                contra_resp = await _claude(api_key, "claude-sonnet-4-6", contra_prompt, 2048)
+                contra_resp = await _groq(api_key, contra_prompt, 2048)
                 found = _parse_json_block(contra_resp)
                 if isinstance(found, list):
                     req_id_map = {r["req_id"]: r["id"] for r in all_requirements}
