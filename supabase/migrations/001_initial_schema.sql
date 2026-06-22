@@ -111,8 +111,8 @@ create table bid_assessments (
 );
 
 -- Indexes for performance
-create index on requirements (project_id);
-create index on requirements using ivfflat (embedding vector_cosine_ops) with (lists = 100);
-create index on content_library using ivfflat (embedding vector_cosine_ops) with (lists = 100);
-create index on deviations (project_id, status);
-create index on addendum_changes (project_id);
+create index if not exists idx_requirements_project    on requirements (project_id);
+create index if not exists idx_requirements_embedding  on requirements using ivfflat (embedding vector_cosine_ops) with (lists = 100);
+create index if not exists idx_library_embedding       on content_library using ivfflat (embedding vector_cosine_ops) with (lists = 100);
+create index if not exists idx_deviations_project      on deviations (project_id, status);
+create index if not exists idx_addendum_project        on addendum_changes (project_id);

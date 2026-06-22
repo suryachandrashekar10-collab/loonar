@@ -48,8 +48,8 @@ create table if not exists document_chunks (
   created_at      timestamptz default now()
 );
 
-create index if not exists on document_chunks (document_id);
-create index if not exists on document_chunks using ivfflat (embedding vector_cosine_ops) with (lists = 100);
-create index if not exists on analysis_jobs (project_id, status);
-create index if not exists on correction_log (requirement_id);
-create index if not exists on correction_log (project_id);
+create index if not exists idx_chunks_document     on document_chunks (document_id);
+create index if not exists idx_chunks_embedding    on document_chunks using ivfflat (embedding vector_cosine_ops) with (lists = 100);
+create index if not exists idx_jobs_project_status on analysis_jobs (project_id, status);
+create index if not exists idx_corrections_req     on correction_log (requirement_id);
+create index if not exists idx_corrections_project on correction_log (project_id);
