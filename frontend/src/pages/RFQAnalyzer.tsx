@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   Upload, FileText, AlertOctagon, CheckCircle, Loader2,
   ExternalLink, ShieldCheck, ShieldAlert, ShieldQuestion,
@@ -100,8 +101,11 @@ function ProgressBar({ value, max }: { value: number; max: number }) {
 // ── Main Component ────────────────────────────────────────────────────────────
 
 export default function RFQAnalyzer() {
+  const DEMO_PROJECT_ID = '00000001-0000-0000-0000-000000000001'
+  const [searchParams] = useSearchParams()
   const [jobStatus, setJobStatus] = useState<JobStatus>('idle')
   const [jobId, setJobId]         = useState<string | null>(null)
+  const [projectId, setProjectId] = useState<string>(searchParams.get('project') || DEMO_PROJECT_ID)
   const [progress, setProgress]   = useState<Progress>({ stage: '', pages_processed: 0, pages_total: 0, requirements_found: 0, contradictions_found: 0 })
   const [requirements, setRequirements] = useState<Requirement[]>([])
   const [contradictions, setContradictions] = useState<Contradiction[]>([])
@@ -110,6 +114,27 @@ export default function RFQAnalyzer() {
   const [overrideNote, setOverrideNote] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
   const sseRef  = useRef<EventSource | null>(null)
+
+  const loadResults = async (pid: string) => {
+    try {
+      const [reqRes, conRes] = await Promise.all([
+        fetch(`http://localhost:8000/projects/${pid}/requirements`),
+        fetch(`http://localhost:8000/projects/${pid}/contradictions`),
+      ])
+      if (reqRes.ok) setRequirements(await reqRes.json())
+      else setRequirements(MOCK_REQUIREMENTS)
+      if (conRes.ok) setContradictions(await conRes.json())
+      else setContradictions(MOCK_CONTRADICTIONS)
+    } catch {
+      setRequirements(MOCK_REQUIREMENTS)
+      setContradictions(MOCK_CONTRADICTIONS)
+    }
+  }
+
+  // Load project results on mount (or when project changes)
+  useEffect(() => {
+    loadResults(projectId)
+  }, [projectId])
 
   // Stream progress via SSE
   useEffect(() => {
@@ -123,9 +148,7 @@ export default function RFQAnalyzer() {
       if (data.progress) setProgress(data.progress)
       if (data.status === 'done') {
         es.close()
-        // Load results — use mock data if backend not wired
-        setRequirements(MOCK_REQUIREMENTS)
-        setContradictions(MOCK_CONTRADICTIONS)
+        loadResults(data.project_id || projectId)
       }
       if (data.status === 'failed') es.close()
     }
@@ -171,11 +194,12 @@ export default function RFQAnalyzer() {
     try {
       const form = new FormData()
       form.append('file', file)
-      form.append('project_id', 'demo-project')
+      form.append('project_id', DEMO_PROJECT_ID)
       const res = await fetch('http://localhost:8000/rfq/upload', { method: 'POST', body: form })
       if (res.ok) {
         const data = await res.json()
         setJobId(data.job_id)
+        if (data.project_id) setProjectId(data.project_id)
       } else {
         simulateMock()
       }
