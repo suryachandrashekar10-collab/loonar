@@ -76,7 +76,7 @@ export default function Dashboard() {
     : []
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-semibold text-white">Overview</h1>
@@ -86,7 +86,7 @@ export default function Dashboard() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         {stats.map(({ label, value, delta, icon: Icon, color }) => (
           <div key={label} className="bg-panel border border-border rounded-xl p-5">
             <div className="flex items-start justify-between mb-3">
@@ -99,11 +99,11 @@ export default function Dashboard() {
         ))}
       </div>
 
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Modules grid */}
-        <div className="col-span-2">
+        <div className="lg:col-span-2">
           <h2 className="text-sm font-medium text-slate-400 uppercase tracking-wider mb-4">Modules</h2>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {modules.map(({ to, icon: Icon, label, desc, color, badge }) => (
               <button
                 key={to}
