@@ -1,12 +1,7 @@
+import { useState, useEffect } from 'react'
 import { FileSearch, AlertTriangle, BookOpen, GitCompare, Scale, TrendingUp, Clock, Target } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-
-const stats = [
-  { label: 'Active RFQs',        value: '12',   delta: '+3 this week',  icon: FileSearch,    color: 'text-brand-400' },
-  { label: 'Open Deviations',    value: '47',   delta: '8 need review', icon: AlertTriangle, color: 'text-amber-400' },
-  { label: 'Library Documents',  value: '234',  delta: '12 added',      icon: BookOpen,      color: 'text-emerald-400' },
-  { label: 'Pending Addenda',    value: '3',    delta: '1 critical',    icon: GitCompare,    color: 'text-rose-400' },
-]
+import API_URL from '../api'
 
 const modules = [
   {
@@ -51,22 +46,43 @@ const modules = [
   },
 ]
 
-const recentActivity = [
-  { time: '2h ago',  text: 'RFQ #2847 analyzed — 3 contradictions detected', type: 'warning' },
-  { time: '5h ago',  text: 'Addendum 03 processed for Shell LNG project',      type: 'info' },
-  { time: '1d ago',  text: 'Deviation register exported — 23 items',           type: 'success' },
-  { time: '2d ago',  text: 'Content library indexed 18 new proposals',         type: 'success' },
-]
-
 export default function Dashboard() {
   const navigate = useNavigate()
+  const [projects, setProjects] = useState<any[]>([])
+
+  useEffect(() => {
+    fetch(`${API_URL}/projects`)
+      .then(r => r.json())
+      .then(data => setProjects(Array.isArray(data) ? data : []))
+      .catch(() => {})
+  }, [])
+
+  const activeRFQs = projects.filter(p => p.status === 'active').length
+  const openDeviations = projects.reduce((sum, p) => sum + (p.pending_deviations || 0), 0)
+
+  const stats = [
+    { label: 'Active RFQs',       value: String(activeRFQs),    delta: `${projects.length} total projects`, icon: FileSearch,    color: 'text-brand-400' },
+    { label: 'Open Deviations',   value: String(openDeviations), delta: 'across all projects',              icon: AlertTriangle, color: 'text-amber-400' },
+    { label: 'Library Documents', value: '0',                    delta: 'upload to grow library',           icon: BookOpen,      color: 'text-emerald-400' },
+    { label: 'Pending Addenda',   value: '0',                    delta: 'no addenda tracked yet',           icon: GitCompare,    color: 'text-rose-400' },
+  ]
+
+  const recentActivity = projects.length > 0
+    ? projects.slice(0, 4).map(p => ({
+        time: p.created_at ? new Date(p.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '',
+        text: `Project '${p.name}' — ${p.requirement_count ?? 0} requirements extracted`,
+        type: 'info' as const,
+      }))
+    : []
 
   return (
     <div className="p-8">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-semibold text-white">Overview</h1>
-        <p className="text-slate-400 text-sm mt-1">Industrial RFQ intelligence platform — Monday, 22 Jun 2026</p>
+        <p className="text-slate-400 text-sm mt-1">
+          Industrial RFQ intelligence platform — {new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' })}
+        </p>
       </div>
 
       {/* Stats */}
@@ -111,7 +127,7 @@ export default function Dashboard() {
         <div>
           <h2 className="text-sm font-medium text-slate-400 uppercase tracking-wider mb-4">Recent Activity</h2>
           <div className="bg-panel border border-border rounded-xl p-4 space-y-4">
-            {recentActivity.map((item, i) => (
+            {recentActivity.length > 0 ? recentActivity.map((item, i) => (
               <div key={i} className="flex gap-3">
                 <div className={`mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0 ${
                   item.type === 'warning' ? 'bg-amber-400' :
@@ -122,7 +138,9 @@ export default function Dashboard() {
                   <p className="text-xs text-slate-600 mt-0.5">{item.time}</p>
                 </div>
               </div>
-            ))}
+            )) : (
+              <p className="text-xs text-slate-500">No recent activity.</p>
+            )}
           </div>
 
           {/* Key metric */}

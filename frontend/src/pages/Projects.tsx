@@ -104,8 +104,8 @@ export default function Projects() {
   useEffect(() => {
     fetch(`${API_URL}/projects`)
       .then(r => r.json())
-      .then(data => setProjects(data.length ? data : MOCK_PROJECTS))
-      .catch(() => setProjects(MOCK_PROJECTS))
+      .then(data => setProjects(Array.isArray(data) ? data : []))
+      .catch(() => setProjects([]))
       .finally(() => setLoading(false))
   }, [])
 
@@ -164,7 +164,7 @@ export default function Projects() {
             <tbody>
               {projects.map((p, i) => (
                 <tr key={p.id}
-                  onClick={() => navigate(`/rfq?project=${p.id}`)}
+                  onClick={() => { localStorage.setItem('lastProjectId', p.id); navigate(`/rfq?project=${p.id}`) }}
                   className={clsx('cursor-pointer hover:bg-white/5 transition-colors', i < projects.length - 1 && 'border-b border-border')}>
                   <td className="px-4 py-3">
                     <div className="text-white font-medium text-sm">{p.name}</div>

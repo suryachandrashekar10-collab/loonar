@@ -106,7 +106,9 @@ export default function RFQAnalyzer() {
   const [searchParams] = useSearchParams()
   const [jobStatus, setJobStatus] = useState<JobStatus>('idle')
   const [jobId, setJobId]         = useState<string | null>(null)
-  const [projectId, setProjectId] = useState<string>(searchParams.get('project') || DEMO_PROJECT_ID)
+  const [projectId, setProjectId] = useState<string>(
+    searchParams.get('project') || localStorage.getItem('lastProjectId') || DEMO_PROJECT_ID
+  )
   const [progress, setProgress]   = useState<Progress>({ stage: '', pages_processed: 0, pages_total: 0, requirements_found: 0, contradictions_found: 0 })
   const [requirements, setRequirements] = useState<Requirement[]>([])
   const [contradictions, setContradictions] = useState<Contradiction[]>([])
@@ -196,7 +198,7 @@ export default function RFQAnalyzer() {
       const form = new FormData()
       form.append('file', file)
       form.append('project_id', projectId)
-      const res = await fetch('${API_URL}/rfq/upload', { method: 'POST', body: form })
+      const res = await fetch(`${API_URL}/rfq/upload`, { method: 'POST', body: form })
       if (res.ok) {
         const data = await res.json()
         setJobId(data.job_id)
@@ -210,19 +212,46 @@ export default function RFQAnalyzer() {
   }
 
   const handleVerify = (reqId: string) => {
+    const req = requirements.find(r => r.id === reqId)
     setRequirements(prev => prev.map(r =>
       r.id === reqId ? { ...r, verified: true, verified_by: 'You' } : r
     ))
+    try {
+      fetch(`${API_URL}/corrections`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          requirement_id: reqId,
+          original_text: req?.text || '',
+          corrected_text: req?.text || '',
+          correction_type: 'verify',
+          corrected_by: 'engineer',
+        }),
+      }).catch(() => {})
+    } catch { /* fire and forget */ }
   }
 
   const handleOverride = (reqId: string) => {
     if (!overrideNote.trim()) return
+    const req = requirements.find(r => r.id === reqId)
     setRequirements(prev => prev.map(r =>
       r.id === reqId ? { ...r, verified: true, verified_by: 'You' } : r
     ))
+    try {
+      fetch(`${API_URL}/corrections`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          requirement_id: reqId,
+          original_text: req?.text || '',
+          corrected_text: overrideNote,
+          correction_type: 'override',
+          corrected_by: 'engineer',
+        }),
+      }).catch(() => {})
+    } catch { /* fire and forget */ }
     setOverrideReq(null)
     setOverrideNote('')
-    // POST to /corrections in real integration
   }
 
   const isProcessing = ['queued', 'ingesting', 'extracting', 'detecting'].includes(jobStatus)
@@ -335,7 +364,7 @@ export default function RFQAnalyzer() {
                           <div className="flex items-center gap-2 mb-2">
                             <span className="font-mono text-xs text-rose-400">{req.req_id}</span>
                             <span className="text-xs text-slate-600">§ {req.clause}</span>
-                            <CitationChip page={req.page_number} doc="SPC-MECH-001" />
+                            <CitationChip page={req.page_number} doc={(req as any).filename || (req as any).document_id || 'Document'} />
                           </div>
                           <p className="text-xs text-slate-300 leading-relaxed">{req.text}</p>
                         </div>
@@ -391,7 +420,7 @@ export default function RFQAnalyzer() {
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          <CitationChip page={req.page_number} doc="SPC-MECH-001" />
+                          <CitationChip page={req.page_number} doc={(req as any).filename || (req as any).document_id || 'Document'} />
                         </td>
                         <td className="px-4 py-3">
                           {req.verified
@@ -408,7 +437,7 @@ export default function RFQAnalyzer() {
                             <div className="flex items-center gap-2 text-xs text-slate-500 mb-4">
                               <FileText size={11} />
                               <span>§ {req.clause} · SPC-MECH-001 · Page {req.page_number}</span>
-                              <button className="text-brand-400 hover:underline ml-2">Open in document →</button>
+                              <button onClick={() => alert('PDF viewer — coming soon')} className="text-brand-400 hover:underline ml-2">Open in document →</button>
                             </div>
 
                             {overrideReq === req.id ? (

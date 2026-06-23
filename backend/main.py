@@ -30,7 +30,7 @@ app.add_middleware(
 SUPABASE_URL = os.getenv("SUPABASE_URL", "")
 SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_KEY", "")
 GEMINI_KEY = os.getenv("GROQ_API_KEY", "")
-OPENAI_KEY = os.getenv("GOOGLE_API_KEY", "") or os.getenv("OPENAI_API_KEY", "")
+OPENAI_KEY = os.getenv("GOOGLE_API_KEY", "") or os.getenv("OPENAI_API_KEY", "") or os.getenv("GROQ_API_KEY", "")
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL else None
 
@@ -159,7 +159,7 @@ async def stream_job_status(job_id: str):
                     job = row.data[0]
                     status = job["status"]
                     progress = job.get("progress") or {}
-                    payload = json.dumps({"status": status, "progress": progress, "error": job.get("error")})
+                    payload = json.dumps({"status": status, "progress": progress, "error": job.get("error"), "project_id": job.get("project_id")})
                     yield f"data: {payload}\n\n"
                     if status in ("done", "failed"):
                         break

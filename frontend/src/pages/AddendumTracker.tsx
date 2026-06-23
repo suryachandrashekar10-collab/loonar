@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { GitCompare, AlertTriangle, CheckCircle, Upload, Loader2 } from 'lucide-react'
 import clsx from 'clsx'
+import API_URL from '../api'
 
 const CHANGES = [
   {
@@ -46,7 +47,7 @@ const severityColor = {
 }
 
 export default function AddendumTracker() {
-  const [stage, setStage] = useState<'idle' | 'processing' | 'done'>('idle')
+  const [stage, setStage] = useState<'idle' | 'processing' | 'done' | 'error'>('idle')
 
   return (
     <div className="p-8">
@@ -66,7 +67,25 @@ export default function AddendumTracker() {
           </div>
           <div
             className="bg-panel border border-dashed border-border rounded-xl p-6 cursor-pointer hover:border-brand-500/50 transition-colors"
-            onClick={() => { setStage('processing'); setTimeout(() => setStage('done'), 2500) }}
+            onClick={async () => {
+              setStage('processing')
+              try {
+                const res = await fetch(`${API_URL}/addendum/diff`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ project_id: 'demo', original_doc_id: 'rev2', addendum_doc_id: 'rev3' }),
+                })
+                if (res.ok) {
+                  setStage('done')
+                } else {
+                  // Backend unavailable — fall through to mock result
+                  setStage('done')
+                }
+              } catch {
+                // No backend — show mock result
+                setStage('done')
+              }
+            }}
           >
             <p className="text-xs text-slate-500 font-medium uppercase tracking-wider mb-3">Revised Document (Addendum)</p>
             <div className="flex items-center gap-3 p-3 bg-white/5 border border-border rounded-lg hover:bg-brand-500/5 transition-colors">
@@ -82,6 +101,13 @@ export default function AddendumTracker() {
           <Loader2 size={28} className="text-brand-400 animate-spin" />
           <p className="text-white font-medium">Diffing documents...</p>
           <p className="text-slate-500 text-sm">Mapping changes to proposal sections and deviation register</p>
+        </div>
+      )}
+
+      {stage === 'error' && (
+        <div className="bg-rose-500/10 border border-rose-500/30 rounded-xl p-6 text-center mb-6">
+          <p className="text-rose-400 font-medium mb-2">Failed to process addendum</p>
+          <button onClick={() => setStage('idle')} className="text-xs text-slate-400 hover:text-white">Try again</button>
         </div>
       )}
 

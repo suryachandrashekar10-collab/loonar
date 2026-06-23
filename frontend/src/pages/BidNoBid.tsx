@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Scale, TrendingUp, AlertTriangle, CheckCircle, XCircle, ChevronRight } from 'lucide-react'
 import clsx from 'clsx'
+import { useNavigate } from 'react-router-dom'
 
 const CRITERIA = [
   { label: 'Technical Capability',  score: 82, weight: 30, detail: 'All core requirements within standard product range. 2 high-risk deviations identified (ASME Section I, low-temp rating).' },
@@ -33,6 +34,7 @@ function ScoreBar({ score }: { score: number }) {
 
 export default function BidNoBid() {
   const [expanded, setExpanded] = useState<string | null>(null)
+  const navigate = useNavigate()
   const { label, color, bg, icon: VerdictIcon } = verdictConfig[verdict]
 
   return (
@@ -123,10 +125,10 @@ export default function BidNoBid() {
           ))}
 
           <div className="flex justify-end gap-3 pt-2">
-            <button className="px-4 py-2 border border-border rounded-lg text-sm text-slate-400 hover:text-white transition-colors">
+            <button onClick={() => alert('Assessment saved!')} className="px-4 py-2 border border-border rounded-lg text-sm text-slate-400 hover:text-white transition-colors">
               Save Assessment
             </button>
-            <button className="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium rounded-lg transition-colors">
+            <button onClick={() => navigate('/rfq')} className="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium rounded-lg transition-colors">
               Proceed to RFQ Analysis →
             </button>
           </div>

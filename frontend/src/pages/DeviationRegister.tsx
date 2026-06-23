@@ -41,8 +41,8 @@ export default function DeviationRegister() {
   useEffect(() => {
     fetch(`${API_URL}/projects/${projectId}/deviations`)
       .then(r => r.json())
-      .then(data => setDeviations(data.length ? data : MOCK))
-      .catch(() => setDeviations(MOCK))
+      .then(data => setDeviations(Array.isArray(data) ? data : []))
+      .catch(() => setDeviations([]))
   }, [projectId])
 
   const handleStatusChange = async (id: string, status: Deviation['status']) => {
@@ -163,7 +163,11 @@ export default function DeviationRegister() {
         })}
 
         {visible.length === 0 && (
-          <div className="text-center py-12 text-slate-500 text-sm">No {filter} deviations.</div>
+          <div className="text-center py-12 text-slate-500 text-sm">
+            {deviations.length === 0
+              ? 'No deviations found. Upload and analyze an RFQ to generate deviations.'
+              : `No ${filter} deviations.`}
+          </div>
         )}
       </div>
     </div>
