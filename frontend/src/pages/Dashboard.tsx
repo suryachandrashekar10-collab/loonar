@@ -130,8 +130,8 @@ export default function Dashboard() {
             {recentActivity.length > 0 ? recentActivity.map((item, i) => (
               <div key={i} className="flex gap-3">
                 <div className={`mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0 ${
-                  item.type === 'warning' ? 'bg-amber-400' :
-                  item.type === 'success' ? 'bg-emerald-400' : 'bg-brand-400'
+                  (item.type as string) === 'warning' ? 'bg-amber-400' :
+                  (item.type as string) === 'success' ? 'bg-emerald-400' : 'bg-brand-400'
                 }`} />
                 <div>
                   <p className="text-xs text-slate-300 leading-relaxed">{item.text}</p>
