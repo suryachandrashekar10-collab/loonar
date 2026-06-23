@@ -115,15 +115,15 @@ export default function Projects() {
   const wonValue   = projects.filter(p => p.status === 'won').reduce((s, p) => s + (p.value_eur || 0), 0)
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-semibold text-white">Projects</h1>
-          <p className="text-slate-400 text-sm mt-1">Each project is one RFQ bid. All analysis, deviations, and documents are scoped to a project.</p>
+          <p className="text-slate-400 text-sm mt-1 hidden sm:block">Each project is one RFQ bid. All analysis, deviations, and documents are scoped to a project.</p>
         </div>
         <button onClick={() => setShowCreate(true)}
           className="flex items-center gap-2 px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium rounded-lg transition-colors">
-          <Plus size={16} /> New Project
+          <Plus size={16} /> <span className="hidden sm:inline">New Project</span><span className="sm:hidden">New</span>
         </button>
       </div>
 
@@ -153,43 +153,68 @@ export default function Projects() {
             <p className="text-slate-600 text-sm mt-1">Create a project to start analysing RFQs</p>
           </div>
         ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border">
-                {['Project', 'Customer', 'RFQ Ref', 'Value', 'Deadline', 'Status', ''].map(h => (
-                  <th key={h} className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {projects.map((p, i) => (
-                <tr key={p.id}
+          <>
+            {/* Mobile cards */}
+            <div className="sm:hidden divide-y divide-border">
+              {projects.map(p => (
+                <div key={p.id}
                   onClick={() => { localStorage.setItem('lastProjectId', p.id); navigate(`/rfq?project=${p.id}`) }}
-                  className={clsx('cursor-pointer hover:bg-white/5 transition-colors', i < projects.length - 1 && 'border-b border-border')}>
-                  <td className="px-4 py-3">
-                    <div className="text-white font-medium text-sm">{p.name}</div>
-                    <div className="text-xs text-slate-600 mt-0.5">{p.created_at ? new Date(p.created_at).toLocaleDateString() : ''}</div>
-                  </td>
-                  <td className="px-4 py-3 text-slate-400 text-xs">{p.customer}</td>
-                  <td className="px-4 py-3 font-mono text-xs text-slate-500">{p.rfq_ref || '—'}</td>
-                  <td className="px-4 py-3 text-sm text-white font-medium">
-                    {p.value_eur ? `€${(p.value_eur / 1e6).toFixed(1)}M` : '—'}
-                  </td>
-                  <td className="px-4 py-3 text-xs text-slate-400">
-                    {p.deadline ? new Date(p.deadline).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={clsx('text-xs px-2 py-0.5 rounded-full border capitalize', STATUS_STYLE[p.status || 'active'])}>
-                      {p.status || 'active'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-slate-600 hover:text-white transition-colors">
-                    <ChevronRight size={16} />
-                  </td>
-                </tr>
+                  className="flex items-center justify-between px-4 py-4 cursor-pointer hover:bg-white/5 transition-colors">
+                  <div className="flex-1 min-w-0 pr-3">
+                    <div className="text-white font-medium text-sm truncate">{p.name}</div>
+                    <div className="text-xs text-slate-500 mt-0.5">{p.customer}</div>
+                    <div className="flex items-center gap-2 mt-1.5">
+                      <span className={clsx('text-xs px-2 py-0.5 rounded-full border capitalize', STATUS_STYLE[p.status || 'active'])}>
+                        {p.status || 'active'}
+                      </span>
+                      {p.deadline && <span className="text-xs text-slate-600">{new Date(p.deadline).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>}
+                    </div>
+                  </div>
+                  <ChevronRight size={16} className="text-slate-600 flex-shrink-0" />
+                </div>
               ))}
-            </tbody>
-          </table>
+            </div>
+            {/* Desktop table */}
+            <div className="hidden sm:block overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border">
+                    {['Project', 'Customer', 'RFQ Ref', 'Value', 'Deadline', 'Status', ''].map(h => (
+                      <th key={h} className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {projects.map((p, i) => (
+                    <tr key={p.id}
+                      onClick={() => { localStorage.setItem('lastProjectId', p.id); navigate(`/rfq?project=${p.id}`) }}
+                      className={clsx('cursor-pointer hover:bg-white/5 transition-colors', i < projects.length - 1 && 'border-b border-border')}>
+                      <td className="px-4 py-3">
+                        <div className="text-white font-medium text-sm">{p.name}</div>
+                        <div className="text-xs text-slate-600 mt-0.5">{p.created_at ? new Date(p.created_at).toLocaleDateString() : ''}</div>
+                      </td>
+                      <td className="px-4 py-3 text-slate-400 text-xs">{p.customer}</td>
+                      <td className="px-4 py-3 font-mono text-xs text-slate-500">{p.rfq_ref || '—'}</td>
+                      <td className="px-4 py-3 text-sm text-white font-medium">
+                        {p.value_eur ? `€${(p.value_eur / 1e6).toFixed(1)}M` : '—'}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-slate-400">
+                        {p.deadline ? new Date(p.deadline).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={clsx('text-xs px-2 py-0.5 rounded-full border capitalize', STATUS_STYLE[p.status || 'active'])}>
+                          {p.status || 'active'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-slate-600 hover:text-white transition-colors">
+                        <ChevronRight size={16} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
 

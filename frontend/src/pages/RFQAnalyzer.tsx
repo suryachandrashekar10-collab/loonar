@@ -257,7 +257,7 @@ export default function RFQAnalyzer() {
   const isProcessing = ['queued', 'ingesting', 'extracting', 'detecting'].includes(jobStatus)
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-semibold text-white">RFQ Analyzer</h1>
@@ -325,7 +325,7 @@ export default function RFQAnalyzer() {
       {(jobStatus === 'done' || requirements.length > 0) && (
         <div className="space-y-6">
           {/* Summary */}
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
               { label: 'Requirements',   value: requirements.length,                                          color: 'text-brand-400' },
               { label: 'High Risk',      value: requirements.filter(r => r.risk_level === 'high').length,    color: 'text-rose-400' },
@@ -384,8 +384,8 @@ export default function RFQAnalyzer() {
               <span className="ml-auto text-xs text-slate-500">Click row to expand · verify or override AI output</span>
             </div>
 
-            <div className="bg-panel border border-border rounded-xl overflow-hidden">
-              <table className="w-full text-sm">
+            <div className="bg-panel border border-border rounded-xl overflow-hidden overflow-x-auto">
+              <table className="w-full text-sm min-w-[600px]">
                 <thead>
                   <tr className="border-b border-border">
                     {['ID', 'Category', 'Requirement', 'Risk', 'Confidence', 'Source', 'Status'].map(h => (
