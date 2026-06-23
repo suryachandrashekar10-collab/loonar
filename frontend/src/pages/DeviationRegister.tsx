@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import API_URL from '../api'
 import { Download, CheckCircle, XCircle, HelpCircle, Clock, ExternalLink } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -38,7 +39,7 @@ export default function DeviationRegister() {
   const projectId = new URLSearchParams(window.location.search).get('project') || 'demo-project'
 
   useEffect(() => {
-    fetch(`http://localhost:8000/projects/${projectId}/deviations`)
+    fetch(`${API_URL}/projects/${projectId}/deviations`)
       .then(r => r.json())
       .then(data => setDeviations(data.length ? data : MOCK))
       .catch(() => setDeviations(MOCK))
@@ -47,7 +48,7 @@ export default function DeviationRegister() {
   const handleStatusChange = async (id: string, status: Deviation['status']) => {
     setDeviations(prev => prev.map(d => d.id === id ? { ...d, status } : d))
     try {
-      await fetch(`http://localhost:8000/deviations/${id}`, {
+      await fetch(`${API_URL}/deviations/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status }),
@@ -58,7 +59,7 @@ export default function DeviationRegister() {
   const handleExport = async () => {
     setExporting(true)
     try {
-      const res = await fetch(`http://localhost:8000/projects/${projectId}/deviations/export`)
+      const res = await fetch(`${API_URL}/projects/${projectId}/deviations/export`)
       if (res.ok) {
         const blob = await res.blob()
         const url = URL.createObjectURL(blob)

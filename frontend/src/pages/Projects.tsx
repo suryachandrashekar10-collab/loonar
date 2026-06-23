@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import API_URL from '../api'
 import { Plus, FolderOpen, TrendingUp, Clock, ChevronRight, X } from 'lucide-react'
 import clsx from 'clsx'
 import { useNavigate } from 'react-router-dom'
@@ -37,7 +38,7 @@ function CreateProjectModal({ onClose, onCreated }: { onClose: () => void; onCre
     if (!form.name || !form.customer) return
     setSaving(true)
     try {
-      const res = await fetch('http://localhost:8000/projects', {
+      const res = await fetch(`${API_URL}/projects`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...form, value_eur: form.value_eur ? parseFloat(form.value_eur) : null }),
@@ -101,7 +102,7 @@ export default function Projects() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    fetch('http://localhost:8000/projects')
+    fetch(`${API_URL}/projects`)
       .then(r => r.json())
       .then(data => setProjects(data.length ? data : MOCK_PROJECTS))
       .catch(() => setProjects(MOCK_PROJECTS))

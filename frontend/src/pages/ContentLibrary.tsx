@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react'
+import API_URL from '../api'
 import { Search, BookOpen, FileText, Upload, Loader2, X } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -49,7 +50,7 @@ export default function ContentLibrary() {
     setSearching(true)
     setSearched(false)
     try {
-      const res = await fetch('http://localhost:8000/library/search', {
+      const res = await fetch('${API_URL}/library/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: q, limit: 8 }),
@@ -81,7 +82,7 @@ export default function ContentLibrary() {
       const form = new FormData()
       form.append('file', file)
       form.append('doc_type', docType)
-      const res = await fetch('http://localhost:8000/library/upload', { method: 'POST', body: form })
+      const res = await fetch('${API_URL}/library/upload', { method: 'POST', body: form })
       if (res.ok) {
         const data = await res.json()
         setUploadedDocs(prev => prev.map(d =>

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
+import API_URL from '../api'
 import { useSearchParams } from 'react-router-dom'
 import {
   Upload, FileText, AlertOctagon, CheckCircle, Loader2,
@@ -118,8 +119,8 @@ export default function RFQAnalyzer() {
   const loadResults = async (pid: string) => {
     try {
       const [reqRes, conRes] = await Promise.all([
-        fetch(`http://localhost:8000/projects/${pid}/requirements`),
-        fetch(`http://localhost:8000/projects/${pid}/contradictions`),
+        fetch(`${API_URL}/projects/${pid}/requirements`),
+        fetch(`${API_URL}/projects/${pid}/contradictions`),
       ])
       if (reqRes.ok) setRequirements(await reqRes.json())
       else setRequirements([])
@@ -140,7 +141,7 @@ export default function RFQAnalyzer() {
   // Stream progress via SSE
   useEffect(() => {
     if (!jobId) return
-    const es = new EventSource(`http://localhost:8000/rfq/status/${jobId}`)
+    const es = new EventSource(`${API_URL}/rfq/status/${jobId}`)
     sseRef.current = es
 
     es.onmessage = (e) => {
@@ -195,7 +196,7 @@ export default function RFQAnalyzer() {
       const form = new FormData()
       form.append('file', file)
       form.append('project_id', projectId)
-      const res = await fetch('http://localhost:8000/rfq/upload', { method: 'POST', body: form })
+      const res = await fetch('${API_URL}/rfq/upload', { method: 'POST', body: form })
       if (res.ok) {
         const data = await res.json()
         setJobId(data.job_id)
