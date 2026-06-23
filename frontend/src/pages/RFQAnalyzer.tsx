@@ -267,7 +267,7 @@ export default function RFQAnalyzer() {
       </div>
 
       {/* Upload zone */}
-      {jobStatus === 'idle' && (
+      {jobStatus === 'idle' && requirements.length === 0 && (
         <div
           onClick={() => fileRef.current?.click()}
           className="border-2 border-dashed border-border rounded-2xl p-14 flex flex-col items-center gap-4 cursor-pointer hover:border-brand-500/50 hover:bg-brand-500/5 transition-all group"
@@ -322,7 +322,7 @@ export default function RFQAnalyzer() {
       )}
 
       {/* Results */}
-      {jobStatus === 'done' && (
+      {(jobStatus === 'done' || requirements.length > 0) && (
         <div className="space-y-6">
           {/* Summary */}
           <div className="grid grid-cols-4 gap-4">
